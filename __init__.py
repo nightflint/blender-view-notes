@@ -331,6 +331,76 @@ def write_note(context, folder, text, window, area, region, space, rv3d, prefs):
     return nid
 
 
+def _stroke_count(scene):
+    gp = scene.annotation
+    if gp is None:
+        return 0
+    return sum(len(l.active_frame.strokes) for l in gp.layers if l.active_frame)
+
+
+class VIEWNOTES_OT_draw(bpy.types.Operator):
+    """Draw on the model to point at things, then write the note (Enter) or cancel (Esc)"""
+
+    bl_idname = "view_notes.draw"
+    bl_label = "New View Note"
+    bl_options = {"REGISTER"}
+
+    HINT = "View Note: draw with the left mouse button to point at things (Ctrl+Z undoes a stroke). " \
+           "Enter: write the note.  Esc: cancel."
+
+    @classmethod
+    def poll(cls, context):
+        return context.area is not None and context.area.type == "VIEW_3D"
+
+    def invoke(self, context, event):
+        if not bpy.data.filepath:
+            self.report({"ERROR"}, "Save the .blend first: notes are stored next to it")
+            return {"CANCELLED"}
+        ts = context.tool_settings
+        self._area = context.area
+        self._placement = ts.annotation_stroke_placement_view3d
+        tool = context.workspace.tools.from_space_view3d_mode(context.mode, create=False)
+        self._tool = tool.idname if tool else "builtin.select_box"
+        self._strokes = _stroke_count(context.scene)
+        if context.scene.annotation is None:  # a layer that reads in screenshots; existing ones are left alone
+            gp = bpy.data.annotations.new("View Notes")
+            layer = gp.layers.new("Note", set_active=True)
+            layer.color = (1.0, 0.1, 0.05)
+            layer.thickness = 6
+            context.scene.annotation = gp
+        ts.annotation_stroke_placement_view3d = "SURFACE"
+        bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
+        self._area.header_text_set(self.HINT)
+        context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def _restore(self, context):
+        context.tool_settings.annotation_stroke_placement_view3d = self._placement
+        with context.temp_override(area=self._area):
+            bpy.ops.wm.tool_set_by_id(name=self._tool)
+        self._area.header_text_set(None)
+
+    def modal(self, context, event):
+        if event.value != "PRESS":
+            return {"PASS_THROUGH"}
+        if event.type in ("RET", "NUMPAD_ENTER"):
+            self._restore(context)
+            region = next(r for r in self._area.regions if r.type == "WINDOW")
+            with context.temp_override(area=self._area, region=region):
+                bpy.ops.view_notes.add("INVOKE_DEFAULT", text=context.scene.view_notes_text)
+            return {"FINISHED"}
+        if event.type == "ESC":
+            self._restore(context)
+            gp = context.scene.annotation
+            if gp is not None and self._strokes == 0:  # only what was drawn for this note
+                for layer in gp.layers:
+                    if layer.active_frame is not None and len(layer.active_frame.strokes):
+                        layer.frames.remove(layer.active_frame)
+            self._area.tag_redraw()
+            return {"CANCELLED"}
+        return {"PASS_THROUGH"}
+
+
 def _edit_note(context, nid, fn):
     folder = notes_dir(context)
     data = load_notes(folder)
@@ -442,8 +512,7 @@ class VIEWNOTES_PT_panel(bpy.types.Panel):
             return
         col = layout.column(align=True)
         col.prop(scene, "view_notes_text", text="")
-        op = col.operator(VIEWNOTES_OT_add.bl_idname, icon="ADD")
-        op.text = scene.view_notes_text
+        col.operator(VIEWNOTES_OT_draw.bl_idname, text="New Note (Ctrl+Alt+N)", icon="GREASEPENCIL")
         row = layout.row(align=True)
         row.prop(scene, "view_notes_show_resolved", text="Resolved", toggle=True)
         row.operator(VIEWNOTES_OT_open_folder.bl_idname, text="", icon="FILE_FOLDER")
@@ -492,6 +561,7 @@ class VIEWNOTES_Preferences(bpy.types.AddonPreferences):
 
 classes = (
     VIEWNOTES_OT_add,
+    VIEWNOTES_OT_draw,
     VIEWNOTES_OT_goto,
     VIEWNOTES_OT_toggle,
     VIEWNOTES_OT_delete,
@@ -510,7 +580,7 @@ def register():
     kc = bpy.context.window_manager.keyconfigs.addon
     if kc:
         km = kc.keymaps.new(name="3D View", space_type="VIEW_3D")
-        kmi = km.keymap_items.new(VIEWNOTES_OT_add.bl_idname, "N", "PRESS", ctrl=True, alt=True)
+        kmi = km.keymap_items.new(VIEWNOTES_OT_draw.bl_idname, "N", "PRESS", ctrl=True, alt=True)
         _keymaps.append((km, kmi))
 
 

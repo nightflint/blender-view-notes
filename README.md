@@ -20,12 +20,16 @@ Blender 5.1 or later. Download the zip from the releases page (or build it, belo
 *Edit > Preferences > Get Extensions > Install from Disk*, or:
 
 ```
-blender --command extension install-file -r user_default -e view_notes-0.1.0.zip
+blender --command extension install-file -r user_default -e view_notes-0.2.0.zip
 ```
 
 ## Use
 
-- **Ctrl+Alt+N** in the 3D Viewport opens a note dialog. Or use the *Notes* tab in the sidebar (N).
+- **Ctrl+Alt+N** in the 3D Viewport (or *New Note* in the sidebar's *Notes* tab) switches to the
+  Annotate tool: draw on the model to point at things (strokes stick to the surface, Ctrl+Z undoes
+  one, you can still orbit and zoom), then press **Enter** to write the note, or **Esc** to cancel.
+  Your previous tool comes back afterwards. Text typed in the *Notes* tab's field beforehand is used
+  as the note without a dialog.
 - The *Notes* tab lists the notes for this folder: go back to a note's view (eye icon), mark it
   resolved (checkbox), delete it (X), open the notes folder.
 - The .blend must be saved: notes are stored next to it, in `//view_notes/` by default
