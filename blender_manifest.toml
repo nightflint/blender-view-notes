@@ -1,0 +1,20 @@
+schema_version = "1.0.0"
+
+id = "view_notes"
+version = "0.1.0"
+name = "View Notes"
+tagline = "Pin notes to viewport views, for reviewers and AI agents"
+maintainer = "nightflint"
+type = "add-on"
+website = "https://github.com/nightflint/blender-view-notes"
+tags = ["3D View", "Pipeline"]
+
+blender_version_min = "5.1.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+
+[permissions]
+files = "Write notes and viewport screenshots next to the .blend"
+
+[build]
+paths_exclude_pattern = ["__pycache__/", "/.git/", "/.github/", "/tests/", "*.zip"]
