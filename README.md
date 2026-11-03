@@ -20,7 +20,7 @@ Blender 5.1 or later. Download the zip from the releases page (or build it, belo
 *Edit > Preferences > Get Extensions > Install from Disk*, or:
 
 ```
-blender --command extension install-file -r user_default -e view_notes-0.2.0.zip
+blender --command extension install-file -r user_default -e view_notes-0.2.1.zip
 ```
 
 ## Use

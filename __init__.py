@@ -264,6 +264,7 @@ class VIEWNOTES_OT_add(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width=560)
 
     def draw(self, context):
+        self.layout.activate_init = True  # type straight away, no click into the field
         self.layout.prop(self, "text", text="")
 
     def execute(self, context):
@@ -381,15 +382,16 @@ class VIEWNOTES_OT_draw(bpy.types.Operator):
         self._area.header_text_set(None)
 
     def modal(self, context, event):
-        if event.value != "PRESS":
-            return {"PASS_THROUGH"}
         if event.type in ("RET", "NUMPAD_ENTER"):
+            # Open the dialog on release: opened on press, the release that follows confirms it empty.
+            if event.value != "RELEASE":
+                return {"RUNNING_MODAL"}
             self._restore(context)
             region = next(r for r in self._area.regions if r.type == "WINDOW")
             with context.temp_override(area=self._area, region=region):
                 bpy.ops.view_notes.add("INVOKE_DEFAULT", text=context.scene.view_notes_text)
             return {"FINISHED"}
-        if event.type == "ESC":
+        if event.type == "ESC" and event.value == "PRESS":
             self._restore(context)
             gp = context.scene.annotation
             if gp is not None and self._strokes == 0:  # only what was drawn for this note
@@ -522,6 +524,8 @@ class VIEWNOTES_PT_panel(bpy.types.Panel):
             layout.label(text=f"notes.json unreadable: {e}", icon="ERROR")
             return
         shown = [n for n in notes if scene.view_notes_show_resolved or n["status"] != "resolved"]
+        if len(shown) < len(notes):
+            layout.label(text=f"{len(notes) - len(shown)} resolved hidden", icon="CHECKMARK")
         for n in reversed(shown):
             box = layout.box()
             row = box.row(align=True)

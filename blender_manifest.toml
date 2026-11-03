@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "view_notes"
-version = "0.2.0"
+version = "0.2.1"
 name = "View Notes"
 tagline = "Pin notes to viewport views, for reviewers and AI agents"
 maintainer = "nightflint"
